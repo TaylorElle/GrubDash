@@ -1,5 +1,6 @@
 const express = require("express");
 // const cors = require("cors");
+require("dotenv").config();
 
 const errorHandler = require("./errors/errorHandler");
 const notFound = require("./errors/notFound");
