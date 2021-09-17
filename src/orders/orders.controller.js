@@ -1,19 +1,13 @@
-// const { STATUS_CODES } = require("http");
-
 const path = require("path");
 
-// Use the existing order data
 const orders = require(path.resolve("src/data/orders-data"));
-const dishes = require(path.resolve("src/data/dishes-data"));
 
-// Use this function to assigh ID's when necessary
 const nextId = require("../utils/nextId");
 
 function propertiesPresent(propertyName) {
   return (req, res, next) => {
     const { data = {} } = req.body;
     const value = data[propertyName];
-    //     console.log(propertyName, value)
     if (value) {
       return next();
     }
@@ -26,14 +20,12 @@ const dishesPropertyPresent = propertiesPresent("dishes");
 
 function orderHasDishes(req, res, next) {
   const { data: { dishes } = {} } = req.body;
-  //   console.log("--", dishes)
   if (dishes.length <= 0 || !Array.isArray(dishes)) {
     next({ status: 400, message: "Order must include at least one dish" });
   }
   next();
 }
 
-//iterate  w/ for each or for loop
 function dishQuantityPropertyPresent(req, res, next) {
   const {
     data: { dishes },
@@ -52,39 +44,12 @@ function dishQuantityPropertyPresent(req, res, next) {
 
 function orderIdExists(req, res, next) {
   const orderId = req.params.orderId;
-  //   console.log(orderId)
   const foundOrder = orders.find((order) => order.id === orderId);
   if (foundOrder) {
     res.locals.orderId = foundOrder;
-    //     console.log(res.locals.orderId);
     next();
   }
   next({ status: 404, message: `No matching order found: ${orderId}` });
-}
-
-function list(req, res, next) {
-  res.json({ data: orders });
-}
-
-function read(req, res, next) {
-  const { orderId } = res.locals;
-  res.json({ data: orderId });
-}
-
-//post
-function create(req, res, next) {
-  const { data: { deliverTo, mobileNumber, status, dishes } = {} } = req.body;
-  //   console.log(dishes);
-
-  const newOrder = {
-    id: nextId(),
-    deliverTo: deliverTo,
-    mobileNumber: mobileNumber,
-    status: status,
-    dishes: dishes,
-  };
-  orders.push(newOrder);
-  res.status(201).json({ data: newOrder });
 }
 
 function statusCheck(req, res, next) {
@@ -119,6 +84,44 @@ function dataMatchCheck(req, res, next) {
   });
 }
 
+function checkStatusForPending(req, res, next) {
+  const orderId = res.locals.orderId;
+  if (orderId.status !== "pending") {
+    next({
+      status: 400,
+      message: "An order cannot be deleted unless it is pending",
+    });
+  }
+  next();
+}
+
+//get
+function list(req, res, next) {
+  res.json({ data: orders });
+}
+
+//read
+function read(req, res, next) {
+  const { orderId } = res.locals;
+  res.json({ data: orderId });
+}
+
+//post
+function create(req, res, next) {
+  const { data: { deliverTo, mobileNumber, status, dishes } = {} } = req.body;
+
+  const newOrder = {
+    id: nextId(),
+    deliverTo: deliverTo,
+    mobileNumber: mobileNumber,
+    status: status,
+    dishes: dishes,
+  };
+  orders.push(newOrder);
+  res.status(201).json({ data: newOrder });
+}
+
+// put
 function update(req, res, next) {
   let order = res.locals.orderId;
   let originalDeliverTo = order.deliverTo;
@@ -147,28 +150,14 @@ function update(req, res, next) {
   res.json({
     data: { id: req.params.orderId, deliverTo, mobileNumber, status, dishes },
   });
-  //   if (id === order.id ) {
-  //     res.json({ data: { deliverTo, mobileNumber, id, status, dishes } });
-  //   }
 }
 
-function checkStatusForPending(req, res, next) {
-  const orderId = res.locals.orderId;
-  if (orderId.status !== "pending") {
-    next({
-      status: 400,
-      message: "An order cannot be deleted unless it is pending",
-    });
-  }
-  next();
-}
-
+//delete
 function destroy(req, res, next) {
   const { orderId } = req.params;
   const index = orders.findIndex(
     (order) => Number(order.id) === Number(orderId)
   );
-  const deletedOrders = orders.splice(index, 1);
   res.sendStatus(204);
 }
 
